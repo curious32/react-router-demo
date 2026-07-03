@@ -1,7 +1,24 @@
+body {
+    margin: 8px 0 8px;
+}
+header {
+    display: flex;
+    align-items: center;      /* Vertical center */
+    background-color: bisque;
+}
+
 h1.not-found-404 {
     color: red;
 }
 
 a.login {
-    float: right;
+    margin-left: auto; 
+}
+
+a.nav-bar {
+    padding: 0 16px 0;
+}
+
+a.logo {
+    padding: 0 8px 0 0 !important;
 }
