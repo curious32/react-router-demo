@@ -1,8 +1,10 @@
+import { useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
+import { selectAuth } from "../../app/store";
 
 export const About = () => {
-    let isLoggedIn: boolean = false;
-    if (!isLoggedIn) {
+    const auth = useSelector(selectAuth);
+    if (auth && !auth.currentUser) {
         return <Navigate to='/login' replace />;
     }
     return <>

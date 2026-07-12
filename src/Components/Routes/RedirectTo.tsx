@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 
 export const RedirectTo = (props: { to: string }) => {
+    let isLoggedIn = false;
     useEffect(() => {
-        window.location.replace(props.to);
+        if (!isLoggedIn) window.location.replace('/login');
+        else window.location.replace(props.to);
     }, []);
     return null;
 }

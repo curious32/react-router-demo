@@ -1,9 +1,11 @@
 body {
     margin: 8px 0 8px;
 }
+
 header {
     display: flex;
-    align-items: center;      /* Vertical center */
+    align-items: center;
+    /* Vertical center */
     background-color: bisque;
 }
 
@@ -12,7 +14,7 @@ h1.not-found-404 {
 }
 
 a.login {
-    margin-left: auto; 
+    margin-left: auto;
 }
 
 a.nav-bar {
@@ -21,4 +23,8 @@ a.nav-bar {
 
 a.logo {
     padding: 0 8px 0 0 !important;
+}
+
+a.right {
+    margin-left: auto !important;
 }
