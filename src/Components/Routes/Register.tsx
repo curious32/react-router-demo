@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import react_router_demo_logo from "../../assets/images/react-router-demo.bmp"
-import { useState, type SubmitEvent } from "react";
-import { type LoggedInUser, type User } from "../../data/user";
+import { useEffect, useState, type SubmitEvent } from "react";
+import { getAuth, isLoggedIn, type AuthState, type LoggedInUser, type User } from "../../data/user";
 import { login } from "../../redux/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUsers } from "../../app/store";
@@ -17,8 +17,21 @@ interface ValidationState {
 
 export const Register = () => {
     const dispatch = useDispatch();
-    const users = useSelector(selectUsers).users || [];
     const navigate = useNavigate();
+    useEffect(() => {
+        if (isLoggedIn()) {
+            const storedAuth: AuthState | null = getAuth();
+            if (storedAuth && storedAuth.currentUser) {
+                const storedLoggedInUser: LoggedInUser = {
+                    username: storedAuth.currentUser.username,
+                    password: storedAuth.currentUser.password
+                };
+                dispatch(login(storedLoggedInUser));
+                navigate('/');
+            }
+        }
+    }, []);
+    const users = useSelector(selectUsers).users || [];
     const validationStateObj: ValidationState = {
         showFirstName: false,
         showLastName: false,
@@ -29,7 +42,6 @@ export const Register = () => {
     const [validationState, setValidationState] = useState<ValidationState>(validationStateObj);
 
     const registeredUser: User = { id: 0, username: "", password: "", fullName: "" };
-    let isConfirmedPwd = false;
 
     const handleSubmit = (event: SubmitEvent<HTMLFormElement>): void => {
         event.preventDefault();
@@ -100,11 +112,10 @@ export const Register = () => {
             validationState.showCPassword = true;
         }
         else {
-            isConfirmedPwd = true;
             validationState.showCPassword = false;
         }
 
-        if (firstname && lastname && username && password && isConfirmedPwd) {
+        if (!validationState.showFirstName && !validationState.showLastName && !validationState.showUsername && !validationState.showPassword && !validationState.showCPassword) {
             registeredUser.id = users.length > 0 ? Math.max(...users.map(user => user.id)) + 1 : 1;
             if (middlename && /^[A-Z][a-z]{1,64}$/.test(middlename)) {
                 registeredUser.fullName = `${firstname} ${middlename} ${lastname}`;

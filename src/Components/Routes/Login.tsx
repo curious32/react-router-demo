@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { login } from "../../redux/authSlice";
 import react_router_demo_logo from "../../assets/images/react-router-demo.bmp";
-import type { LoggedInUser } from "../../data/user";
+import { getAuth, isLoggedIn, type AuthState, type LoggedInUser } from "../../data/user";
 import { selectAuth } from "../../app/store";
 
 interface LoginPageState {
@@ -13,8 +13,21 @@ interface LoginPageState {
 
 export const Login = () => {
     const dispatch = useDispatch();
-    const auth = useSelector(selectAuth);
     const navigate = useNavigate();
+    useEffect(() => {
+        if (isLoggedIn()) {
+            const storedAuth: AuthState | null = getAuth();
+            if (storedAuth && storedAuth.currentUser) {
+                const storedLoggedInUser: LoggedInUser = {
+                    username: storedAuth.currentUser.username,
+                    password: storedAuth.currentUser.password
+                };
+                dispatch(login(storedLoggedInUser));
+                navigate('/');
+            }
+        }
+    }, []);
+    const auth = useSelector(selectAuth);
     const [loginPageState, setLoginPageState] = useState<LoginPageState>({ isValidate: null, isPageStateChanged: false });
 
     const loggedInUser: LoggedInUser = { username: "", password: "" };

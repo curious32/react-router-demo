@@ -17,7 +17,7 @@ a.login {
     margin-left: auto;
 }
 
-a.nav-bar {
+a.nav-bar, button.nav-bar {
     padding: 0 16px 0;
 }
 
@@ -25,6 +25,22 @@ a.logo {
     padding: 0 8px 0 0 !important;
 }
 
-a.right {
+a.right, button.right {
     margin-left: auto !important;
+}
+
+button.a-link {
+    border-width: 0;
+    background-color: inherit;
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+} 
+
+button.a-link:hover {
+    color: darkblue;
+}
+
+button.a-link:focus {
+    outline: 2px solid royalblue;
 }
