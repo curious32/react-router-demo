@@ -5,7 +5,7 @@ import usersReducer from '../redux/usersSlice';
 export const store = configureStore({
     reducer: {
         auth: authReducer,
-        users: usersReducer
+        reg: usersReducer
     }
 });
 
@@ -16,4 +16,4 @@ export type AppDispatch =
     typeof store.dispatch;
 
 export const selectAuth = (state: RootState) => state.auth;
-export const selectUsers = (state: RootState) => state.users;
+export const selectUsers = (state: RootState) => state.reg;

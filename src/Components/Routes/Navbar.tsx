@@ -1,20 +1,24 @@
-import { type MouseEvent } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect, type MouseEvent } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import react_router_demo_logo from "../../assets/images/react-router-demo.bmp"
-import { selectAuth } from "../../app/store";
 import { logout } from "../../redux/authSlice";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { log } from "../../util/common";
 
 export const Navbar = () => {
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const auth = useSelector(selectAuth);
-    function handleLogout(event: MouseEvent<HTMLButtonElement>): void {
-        event.preventDefault();
-        if (auth && auth.currentUser) {
-            dispatch(logout());
+    const auth = useAppSelector(state => state.auth);
+    useEffect(() => {
+        if (auth && !auth.auth || !auth.code) {
             navigate('/login');
         }
+    }, []);
+    function handleLogout(event: MouseEvent<HTMLButtonElement>): void {
+        event.preventDefault();
+        dispatch(logout());
+        log('LOGOUT: ', auth);
+        navigate('/login');
     }
 
     return <>

@@ -1,11 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import react_router_demo_logo from "../../assets/images/react-router-demo.bmp"
 import { useEffect, useState, type SubmitEvent } from "react";
-import { getAuth, isLoggedIn, type AuthState, type LoggedInUser, type User } from "../../data/user";
-import { login } from "../../redux/authSlice";
-import { useDispatch, useSelector } from "react-redux";
-import { selectUsers } from "../../app/store";
-import { addUser } from "../../redux/usersSlice";
+import { type LoggedInUser, type User } from "../../data/user";
+import { login, LoginMessageCode } from "../../redux/authSlice";
+import { addUser, RegisterMessageCode } from "../../redux/usersSlice";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { log } from "../../util/common";
 
 interface ValidationState {
     showFirstName: boolean;
@@ -16,22 +16,10 @@ interface ValidationState {
 }
 
 export const Register = () => {
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    useEffect(() => {
-        if (isLoggedIn()) {
-            const storedAuth: AuthState | null = getAuth();
-            if (storedAuth && storedAuth.currentUser) {
-                const storedLoggedInUser: LoggedInUser = {
-                    username: storedAuth.currentUser.username,
-                    password: storedAuth.currentUser.password
-                };
-                dispatch(login(storedLoggedInUser));
-                navigate('/');
-            }
-        }
-    }, []);
-    const users = useSelector(selectUsers).users || [];
+    const reg = useAppSelector(state => state.reg);
+    const auth = useAppSelector(state => state.auth);
     const validationStateObj: ValidationState = {
         showFirstName: false,
         showLastName: false,
@@ -43,7 +31,7 @@ export const Register = () => {
 
     const registeredUser: User = { id: 0, username: "", password: "", fullName: "" };
 
-    const handleSubmit = (event: SubmitEvent<HTMLFormElement>): void => {
+    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
         event.preventDefault();
 
         const form = event.currentTarget;
@@ -76,7 +64,7 @@ export const Register = () => {
         }
         else {
             validationState.showFirstName = false;
-            console.log('Called');
+            log('Called');
         }
         if (!lastname) {
             validationState.showLastName = true;
@@ -115,8 +103,8 @@ export const Register = () => {
             validationState.showCPassword = false;
         }
 
-        if (!validationState.showFirstName && !validationState.showLastName && !validationState.showUsername && !validationState.showPassword && !validationState.showCPassword) {
-            registeredUser.id = users.length > 0 ? Math.max(...users.map(user => user.id)) + 1 : 1;
+        if (!validationState.showFirstName && !validationState.showLastName &&
+            !validationState.showUsername && !validationState.showPassword && !validationState.showCPassword) {
             if (middlename && /^[A-Z][a-z]{1,64}$/.test(middlename)) {
                 registeredUser.fullName = `${firstname} ${middlename} ${lastname}`;
             }
@@ -125,19 +113,22 @@ export const Register = () => {
             }
             registeredUser.username = username;
             registeredUser.password = password;
-            const userIndex = users.findIndex(user => user.username == registeredUser.username);
-            if (userIndex < 0) {
-                dispatch(addUser(registeredUser));
-                const loggedInUser: LoggedInUser = { username, password };
-                dispatch(login(loggedInUser));
-                navigate('/');
-            }
-            else {
-                alert('User already exist');
-            }
+            await dispatch(addUser(registeredUser));
+            const loggedInUser: LoggedInUser = { username, password };
+            await dispatch(login(loggedInUser));
+        } else {
+            setValidationState(prev => ({ ...prev, ...validationState }));
         }
-        setValidationState(prev => ({ ...prev, ...validationState }));
     }
+    useEffect(() => {
+        if (!reg.loading && reg.code == RegisterMessageCode.USER_ADDED.code &&
+            !auth.loading && auth.code == LoginMessageCode.LOGIN_SUCCESS.code) {
+            alert('Adding user successfull');
+            navigate('/');
+        } else if (!reg.loading && reg.code && reg.code != RegisterMessageCode.USER_ADDED.code) {
+            alert(reg.message);
+        }
+    }, [auth, reg]);
     return <>
         <header>
             <Link to="/" className="logo nav-bar"><img src={react_router_demo_logo} alt="" /></Link>
@@ -177,7 +168,7 @@ export const Register = () => {
                         </tr>
                         <tr>
                             <td><button type="reset">Clear</button></td>
-                            <td><button type="submit">Submit</button></td>
+                            <td><button type="submit" disabled={reg.loading || auth.loading}>Submit</button></td>
                         </tr>
                         <tr>
                             <td colSpan={2}>
@@ -187,6 +178,9 @@ export const Register = () => {
                     </tbody>
                 </table>
             </form>
+            {reg.loading || auth.loading && <div className="full-screen">
+                <div className="loader"></div>
+            </div>}
         </main>
     </>
 };

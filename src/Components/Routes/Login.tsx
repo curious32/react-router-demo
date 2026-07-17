@@ -1,38 +1,19 @@
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useEffect, type SubmitEvent } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { login } from "../../redux/authSlice";
+import { login, LoginMessageCode } from "../../redux/authSlice";
 import react_router_demo_logo from "../../assets/images/react-router-demo.bmp";
-import { getAuth, isLoggedIn, type AuthState, type LoggedInUser } from "../../data/user";
+import { type LoggedInUser } from "../../data/user";
 import { selectAuth } from "../../app/store";
-
-interface LoginPageState {
-    isValidate: boolean | null;
-    isPageStateChanged: boolean;
-}
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { log } from "../../util/common";
 
 export const Login = () => {
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    useEffect(() => {
-        if (isLoggedIn()) {
-            const storedAuth: AuthState | null = getAuth();
-            if (storedAuth && storedAuth.currentUser) {
-                const storedLoggedInUser: LoggedInUser = {
-                    username: storedAuth.currentUser.username,
-                    password: storedAuth.currentUser.password
-                };
-                dispatch(login(storedLoggedInUser));
-                navigate('/');
-            }
-        }
-    }, []);
-    const auth = useSelector(selectAuth);
-    const [loginPageState, setLoginPageState] = useState<LoginPageState>({ isValidate: null, isPageStateChanged: false });
-
+    const auth = useAppSelector(selectAuth);
     const loggedInUser: LoggedInUser = { username: "", password: "" };
 
-    const handleSubmit = (event: SubmitEvent<HTMLFormElement>): void => {
+    const handleSubmit = async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
         event.preventDefault();
         const form = event.currentTarget;
 
@@ -46,21 +27,16 @@ export const Login = () => {
 
         loggedInUser.username = username;
         loggedInUser.password = password;
-
-        dispatch(login(loggedInUser));
-        setLoginPageState(prev => ({ ...prev, isPageStateChanged: true }));
+        await dispatch(login(loggedInUser));
     }
 
     useEffect(() => {
-        if (loginPageState.isPageStateChanged) {
-            if (auth && auth.currentUser) {
-                console.log('Logged in successfull');
-                navigate('/');
-            } else {
-                setLoginPageState(prev => ({ ...prev, isValidate: false, isPageStateChanged: false }));
-            }
+        log('Auth: ', auth);
+        if (auth && auth.code == LoginMessageCode.LOGIN_SUCCESS.code) {
+            alert('Successfully logged-in');
+            navigate('/');
         }
-    }, [loginPageState.isPageStateChanged]);
+    }, [auth]);
 
     return <>
         <header>
@@ -80,10 +56,13 @@ export const Login = () => {
                         </tr>
                         <tr>
                             <td><button type="reset">Clear</button></td>
-                            <td><button type="submit">Submit</button></td>
+                            <td><button type="submit" disabled={auth.loading}>Submit</button></td>
                         </tr>
                         <tr>
-                            <td colSpan={2}>{loginPageState.isValidate == false ? <span style={{ color: "red" }}>Username or password did not match.</span> : null}</td>
+                            <td colSpan={2}>
+                                {auth.code == LoginMessageCode.LOGIN_FAILED.code &&
+                                    <span style={{ color: "red" }}>Username or password did not match.</span>}
+                            </td>
                         </tr>
                         <tr>
                             <td colSpan={2}>
@@ -93,6 +72,9 @@ export const Login = () => {
                     </tbody>
                 </table>
             </form>
+            {auth.loading && <div className="full-screen">
+                <div className="loader"></div>
+            </div>}
         </main>
     </>
 };

@@ -15,18 +15,18 @@ export interface LoggedInUser {
     password: string;
 }
 
-export const getUsers: () => User[] = () => {
-    const usersJson: string | null = localStorage.getItem('users');
+export async function getUsers(): Promise<User[]> {
+    const usersJson: string | null = await localStorage.getItem('users');
     if (usersJson) return JSON.parse(usersJson) as User[];
     return [];
 }
 
-export const storeUsers: (users: User[]) => void = (users: User[]) => {
-    localStorage.removeItem('users');
+export async function storeUsers(users: User[]): Promise<void> {
+    await localStorage.removeItem('users');
     localStorage.setItem('users', JSON.stringify(users));
 }
 
-export const getAuth: () => AuthState | null = () => {
+export function getAuth(): AuthState | null {
     const authJson: string | null = localStorage.getItem('auth');
     if (authJson) return JSON.parse(authJson) as AuthState;
     return null;
