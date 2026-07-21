@@ -1,4 +1,4 @@
-import { useEffect, type SubmitEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { login, LoginMessageCode } from "../../redux/authSlice";
 import react_router_demo_logo from "../../assets/images/react-router-demo.bmp";
@@ -6,12 +6,22 @@ import { type LoggedInUser } from "../../data/user";
 import { selectAuth } from "../../app/store";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { log } from "../../util/common";
+import { Loader } from "../Loader";
+import { Alert } from "../dialogs/Alert";
+
+interface AlertMsg {
+    msg: string;
+    cb?: () => void;
+}
 
 export const Login = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const auth = useAppSelector(selectAuth);
     const loggedInUser: LoggedInUser = { username: "", password: "" };
+    const [msg, setMsg] = useState<AlertMsg | null>(null);
+    const customAlert: (value: AlertMsg) => React.ReactNode =
+        (value: AlertMsg) => <Alert ChildElement={<span>{value.msg}</span>} callback={value.cb} />;
 
     const handleSubmit = async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
         event.preventDefault();
@@ -33,8 +43,8 @@ export const Login = () => {
     useEffect(() => {
         log('Auth: ', auth);
         if (auth && auth.code == LoginMessageCode.LOGIN_SUCCESS.code) {
-            alert('Successfully logged-in');
-            navigate('/');
+            if (auth.pageRefreshed) navigate('/', { replace: true });
+            else setMsg({ msg: 'Successfully logged-in', cb: () => navigate('/', { replace: true }) });
         }
     }, [auth]);
 
@@ -72,9 +82,8 @@ export const Login = () => {
                     </tbody>
                 </table>
             </form>
-            {auth.loading && <div className="full-screen">
-                <div className="loader"></div>
-            </div>}
+            {auth.loading && <Loader />}
+            {!auth.loading && msg && customAlert(msg)}
         </main>
     </>
 };

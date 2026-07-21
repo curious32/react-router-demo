@@ -1,11 +1,18 @@
 import { Link, useNavigate } from "react-router-dom";
 import react_router_demo_logo from "../../assets/images/react-router-demo.bmp"
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { type LoggedInUser, type User } from "../../data/user";
 import { login, LoginMessageCode } from "../../redux/authSlice";
 import { addUser, RegisterMessageCode } from "../../redux/usersSlice";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { log } from "../../util/common";
+import { Loader } from "../Loader";
+import { Alert } from "../dialogs/Alert";
+
+interface AlertMsg {
+    msg: string;
+    cb?: () => void;
+}
 
 interface ValidationState {
     showFirstName: boolean;
@@ -19,7 +26,7 @@ export const Register = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const reg = useAppSelector(state => state.reg);
-    const auth = useAppSelector(state => state.auth);
+    const auth = useAppSelector(state => state.auth); const stateRef = useRef<number>(0);
     const validationStateObj: ValidationState = {
         showFirstName: false,
         showLastName: false,
@@ -28,6 +35,13 @@ export const Register = () => {
         showCPassword: false
     };
     const [validationState, setValidationState] = useState<ValidationState>(validationStateObj);
+    const [msg, setMsg] = useState<{ flag: boolean, value: AlertMsg | null }>({ flag: false, value: null });
+    function showAlert(value: AlertMsg) {
+        setMsg({ flag: true, value: value });
+    }
+    function hideAlert() {
+        setMsg({ flag: false, value: null });
+    }
 
     const registeredUser: User = { id: 0, username: "", password: "", fullName: "" };
 
@@ -56,55 +70,57 @@ export const Register = () => {
         const cpassword =
             formData.get("cpassword") as string;
 
+        const nextValidationState: ValidationState = { ...validationState }
         if (!firstname) {
-            validationState.showFirstName = true;
+            nextValidationState.showFirstName = true;
         }
         else if (!/^[A-Z][a-z]{1,64}$/.test(firstname)) {
-            validationState.showFirstName = true;
+            nextValidationState.showFirstName = true;
         }
         else {
-            validationState.showFirstName = false;
+            nextValidationState.showFirstName = false;
             log('Called');
         }
         if (!lastname) {
-            validationState.showLastName = true;
+            nextValidationState.showLastName = true;
         }
         else if (!/^[A-Z][a-z]{1,64}$/.test(lastname)) {
-            validationState.showLastName = true;
+            nextValidationState.showLastName = true;
         }
         else {
-            validationState.showLastName = false;
+            nextValidationState.showLastName = false;
         }
         if (!username) {
-            validationState.showUsername = true;
+            nextValidationState.showUsername = true;
         }
-        else if (!/^[a-z][a-z0-9]{2,15}$/.test(username)) {
-            validationState.showUsername = true;
+        else if (!/^[a-z][a-z0-9]{1,15}$/.test(username)) {
+            nextValidationState.showUsername = true;
         }
         else {
-            validationState.showUsername = false;
+            nextValidationState.showUsername = false;
         }
         if (!password) {
-            validationState.showPassword = true;
+            nextValidationState.showPassword = true;
         }
         else if (!/^\S{8,32}$/.test(password)) {
-            validationState.showPassword = true;
+            nextValidationState.showPassword = true;
         }
         else {
-            validationState.showPassword = false;
+            nextValidationState.showPassword = false;
         }
         if (!cpassword) {
-            validationState.showCPassword = true;
+            nextValidationState.showCPassword = true;
         }
         else if (password && password != cpassword) {
-            validationState.showCPassword = true;
+            nextValidationState.showCPassword = true;
         }
         else {
-            validationState.showCPassword = false;
+            nextValidationState.showCPassword = false;
         }
 
-        if (!validationState.showFirstName && !validationState.showLastName &&
-            !validationState.showUsername && !validationState.showPassword && !validationState.showCPassword) {
+        if (!nextValidationState.showFirstName && !nextValidationState.showLastName &&
+            !nextValidationState.showUsername && !nextValidationState.showPassword &&
+            !nextValidationState.showCPassword) {
             if (middlename && /^[A-Z][a-z]{1,64}$/.test(middlename)) {
                 registeredUser.fullName = `${firstname} ${middlename} ${lastname}`;
             }
@@ -113,22 +129,30 @@ export const Register = () => {
             }
             registeredUser.username = username;
             registeredUser.password = password;
-            await dispatch(addUser(registeredUser));
-            const loggedInUser: LoggedInUser = { username, password };
-            await dispatch(login(loggedInUser));
+            const result = await dispatch(addUser(registeredUser));
+            if (addUser.fulfilled.match(result)) {
+                if (result.payload.code === RegisterMessageCode.USER_ADDED.code) {
+                    const loggedInUser: LoggedInUser = { username, password };
+                    await dispatch(login(loggedInUser));
+                }
+            }
         } else {
-            setValidationState(prev => ({ ...prev, ...validationState }));
+            setValidationState(nextValidationState);
         }
     }
+
     useEffect(() => {
-        if (!reg.loading && reg.code == RegisterMessageCode.USER_ADDED.code &&
-            !auth.loading && auth.code == LoginMessageCode.LOGIN_SUCCESS.code) {
-            alert('Adding user successfull');
-            navigate('/');
-        } else if (!reg.loading && reg.code && reg.code != RegisterMessageCode.USER_ADDED.code) {
-            alert(reg.message);
+        if (auth) {
+            if (auth.pageRefreshed) navigate('/', { replace: true });
+            else if (!reg.loading && reg.code == RegisterMessageCode.USER_ADDED.code &&
+                !auth.loading && auth.code == LoginMessageCode.LOGIN_SUCCESS.code) {
+                showAlert({ msg: 'Adding user successfull', cb: () => navigate('/', { replace: true }) });
+            } else if (!reg.loading && reg.code && reg.code != RegisterMessageCode.USER_ADDED.code) {
+                if (reg.message) showAlert({ msg: reg.message, cb: () => hideAlert() });
+            }
         }
     }, [auth, reg]);
+    log('State: ', stateRef.current++);
     return <>
         <header>
             <Link to="/" className="logo nav-bar"><img src={react_router_demo_logo} alt="" /></Link>
@@ -178,9 +202,8 @@ export const Register = () => {
                     </tbody>
                 </table>
             </form>
-            {reg.loading || auth.loading && <div className="full-screen">
-                <div className="loader"></div>
-            </div>}
+            {reg.loading || auth.loading && <Loader />}
+            {msg.flag && <Alert ChildElement={<span>{msg.value?.msg}</span>} callback={msg.value?.cb} />}
         </main>
     </>
 };

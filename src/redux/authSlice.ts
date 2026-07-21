@@ -1,5 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { getUsers, removeAuth, storeAuth, type AuthState, type LoggedInUser, type User } from "../data/user";
+import { getAuth, getUsers, removeAuth, storeAuth, type AuthState, type LoggedInUser, type User } from "../data/user";
+import { delay, log } from "../util/common";
+import type { RootState } from "../app/store";
 
 export const LoginMessageCode = {
     LOGIN_SUCCESS: {
@@ -25,39 +27,48 @@ interface AuthSliceState {
     loading: boolean;
     code: string | null;
     message: string | null;
+    pageRefreshed: boolean;
 }
 
-const initialState: AuthSliceState = {
-    auth: null,
-    loading: false,
-    code: null,
-    message: null
-};
+function getInitialState(): AuthSliceState {
+    const value = getAuth();
+    return {
+        auth: value,
+        loading: false,
+        code: value ? LoginMessageCode.LOGIN_SUCCESS.code : null,
+        message: value ? LoginMessageCode.LOGIN_SUCCESS.message : null,
+        pageRefreshed: true
+    };
+}
 
 export const login = createAsyncThunk(
     "auth/login",
     async (request: LoggedInUser, thunkAPI) => {
         try {
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            const users: User[] = await getUsers();
-            if (!users) return;
-            const user = users.find(x =>
-                x.username === request.username &&
-                x.password === request.password
-            );
-            if (user) {
-                const auth: AuthState = { isLoggedIn: true, currentUser: user };
-                return {
-                    value: auth,
-                    code: LoginMessageCode.LOGIN_SUCCESS.code,
-                    message: LoginMessageCode.LOGIN_SUCCESS.message
-                };
-            } else {
-                return {
-                    value: null,
-                    code: LoginMessageCode.LOGIN_FAILED.code,
-                    message: LoginMessageCode.LOGIN_FAILED.message
-                };
+            const state = thunkAPI.getState() as RootState;
+            log('thunkAPI.getState(): ', state);
+            if (state && !state.auth.auth) {
+                await delay(5000);
+                const users: User[] = await getUsers();
+                if (!users) return;
+                const user = users.find(x =>
+                    x.username === request.username &&
+                    x.password === request.password
+                );
+                if (user) {
+                    const auth: AuthState = { isLoggedIn: true, currentUser: user };
+                    return {
+                        value: auth,
+                        code: LoginMessageCode.LOGIN_SUCCESS.code,
+                        message: LoginMessageCode.LOGIN_SUCCESS.message
+                    };
+                } else {
+                    return {
+                        value: null,
+                        code: LoginMessageCode.LOGIN_FAILED.code,
+                        message: LoginMessageCode.LOGIN_FAILED.message
+                    };
+                }
             }
         } catch (error) {
             return thunkAPI.rejectWithValue(
@@ -69,7 +80,7 @@ export const login = createAsyncThunk(
 
 const authSlice = createSlice({
     name: "auth",
-    initialState,
+    initialState: getInitialState(),
 
     reducers: {
         logout(state) {
@@ -78,6 +89,7 @@ const authSlice = createSlice({
                 state.auth.isLoggedIn = false;
                 state.code = LoginMessageCode.LOGOUT_SUCCESS.code;
                 state.message = LoginMessageCode.LOGOUT_SUCCESS.message;
+                state.pageRefreshed = false;
                 removeAuth();
             }
         }
@@ -93,6 +105,7 @@ const authSlice = createSlice({
                     state.code = null;
                     state.message = null;
                     state.auth = null;
+                    state.pageRefreshed = false;
                 })
             .addCase(
                 login.fulfilled,
@@ -107,6 +120,7 @@ const authSlice = createSlice({
                         }
                         state.code = action.payload.code;
                         state.message = action.payload.message;
+                        state.pageRefreshed = false;
                     }
                 })
             .addCase(
@@ -117,6 +131,7 @@ const authSlice = createSlice({
                     state.code = LoginMessageCode.EXCEPTION_OCCURED.code;
                     state.message =
                         action.error.message ?? LoginMessageCode.LOGIN_FAILED.message;
+                    state.pageRefreshed = false;
                 })
     }
 });

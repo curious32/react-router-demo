@@ -10,15 +10,15 @@ export const Navbar = () => {
     const navigate = useNavigate();
     const auth = useAppSelector(state => state.auth);
     useEffect(() => {
-        if (auth && !auth.auth || !auth.code) {
-            navigate('/login');
+        if (auth && !auth.auth) {
+            navigate('/login', { replace: true });
         }
     }, []);
     function handleLogout(event: MouseEvent<HTMLButtonElement>): void {
         event.preventDefault();
         dispatch(logout());
         log('LOGOUT: ', auth);
-        navigate('/login');
+        navigate('/login', { replace: true });
     }
 
     return <>
